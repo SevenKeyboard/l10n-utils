@@ -350,7 +350,7 @@ class _AhkL10n
     static loadTextDomain(domain := "default", locale?)    {
         if (!this._Ready)
             return false
-        return !!this._ensureHCatalog(isSet(locale)? locale . ".UTF-8" : this._LocaleName, domain)
+        return !!this._ensureHCatalog(isSet(locale) ? locale . ".UTF-8" : this._LocaleName, domain)
     }
     ;-------------------------------------------------------------------------------------------
     static _getFullPathName(fileName)    {
