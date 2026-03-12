@@ -21,21 +21,11 @@
 ;   _nx()
 ;     https://developer.wordpress.org/reference/functions/_nx/
 ;
-;   Latest supported redistributable version
-;     https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version
-;   Command-line options for the redistributable packages
-;     https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files?view=msvc-170#command-line-options-for-the-redistributable-packages
-;
 ;   MoCatalog.dll (64bits) - VirusTotal
-;     https://www.virustotal.com/gui/file/20849495a31ce0747993c524148b710ba8e7a06547bae382a649df9958471a74
+;     https://www.virustotal.com/gui/file/e7a5f2ad906d017cc4a39fe9d5b26ae5cbf7d35bcde2b7495b3607e819e5b77a
 ;   MoCatalog.dll - VirusTotal
-;     https://www.virustotal.com/gui/file/50ce84b453b255ed6bf8a922f8357cd83145a6636ba400bcbb6233f2bc91f243
-;   boost_locale-vc143-mt-x64-1_90.dll (64bits) - VirusTotal
-;     https://www.virustotal.com/gui/file/e249266f7a8c3540c3ddd99a12015f01cf7d42c2be8e9b9442fb70eec35550d3
-;   boost_locale-vc143-mt-x32-1_90.dll - VirusTotal
-;     https://www.virustotal.com/gui/file/805b4728ceb20c32fa2483a93cd0a850e623a6fd77cca0b1ad44ac2d9b6a1557
+;     https://www.virustotal.com/gui/file/f19c6db712433871edc003224d491bcc89b50e23e3e9bf1f2cfbc4f3f9195e2a
 ;==============================================================
-
 /*
 my-app/
 ├─ MyApp.ahk
@@ -43,11 +33,9 @@ my-app/
 │  └─ L10nUtils.ahk
 ├─ dll/
 │  ├─ x64/
-│  │  ├─ MoCatalog.dll
-│  │  └─ boost_locale-vc143-mt-x64-1_90.dll
+│     └─ MoCatalog.dll
 │  └─ x86/
-│     ├─ MoCatalog.dll
-│     └─ boost_locale-vc143-mt-x32-1_90.dll
+│     └─ MoCatalog.dll
 └─ locale/
    ├─ en_US/
    │  └─ LC_MESSAGES/
@@ -66,16 +54,15 @@ my-app/
    │     └─ ...
    └─ ...
 */
-
 class VersionManager_L10nUtils
 {
     static _ := this._init()
     static _init()    {
         global
-        L10NUTILS_VERSION := "0.0.0"
+        L10NUTILS_VERSION := "1.0.0"
     }
 }
-
+;=======================================================================================================================
 __(text, domain := "default")    { ;  https://developer.wordpress.org/reference/functions/__/
     return _AhkL10n.getText(text is VarRef ? text : &text
         ,domain)
@@ -98,24 +85,22 @@ _nx(single, plural, num, context, domain := "default")    { ;  https://developer
         ,context
         ,domain)
 }
-
+;-------------------------------------------------------------------------------------------
+loadTextDomain(domain := "default", locale?) => _AhkL10n.loadTextDomain(domain, locale?) ;  https://developer.wordpress.org/reference/functions/load_textdomain/
+;-------------------------------------------------------------------------------------------
 initOriginalLocale(locale)  => _AhkLocaleSwitcher.initOriginalLocale(locale)
 getLocale()                 => _AhkLocaleSwitcher.getLocale()                   ;  https://developer.wordpress.org/reference/functions/get_locale/
 isLocaleSwitched()          => _AhkLocaleSwitcher.isSwitched()                  ;  https://developer.wordpress.org/reference/functions/is_locale_switched/
 switchToLocale(locale)      => _AhkLocaleSwitcher.switchToLocale(locale)        ;  https://developer.wordpress.org/reference/functions/switch_to_locale/
 restorePreviousLocale()     => _AhkLocaleSwitcher.restorePreviousLocale()       ;  https://developer.wordpress.org/reference/functions/restore_previous_locale/
 restoreCurrentLocale()      => _AhkLocaleSwitcher.restoreCurrentLocale()        ;  https://developer.wordpress.org/reference/functions/restore_current_locale/
-
+;=======================================================================================================================
 class _AhkL10n
 {
     ;  WARNING: Backward compatibility is not guaranteed for any methods or properties in this class.
     static _dllDir              := this._getFullPathName(A_ScriptDir . "\dll" . (A_PtrSize == 8 ? "\x64" : "\x86"))
         ,_moCatalogDllPath      := this._dllDir . "\MoCatalog.dll" ;  https://github.com/SevenKeyboard/mo-catalog
-        ,_boostLocaleDllPath    := this._dllDir . (A_PtrSize == 8
-            ? "\boost_locale-vc143-mt-x64-1_90.dll"     ;  vcpkg\installed\x64-windows\bin\boost_locale-vc143-mt-x64-1_90.dll
-            : "\boost_locale-vc143-mt-x32-1_90.dll")    ;  vcpkg\installed\x86-windows\bin\boost_locale-vc143-mt-x32-1_90.dll
         ,_hMoCatalogMod         := 0
-        ,_hBoostLocaleMod       := 0
         ,_moCatalogProcTable    := {}
         ,_objbmOnExiting        := objBindMethod(this, "_onExiting")
     static __new()    {
@@ -124,19 +109,14 @@ class _AhkL10n
             this._loadLibraries()
         }
     }
-    static _Ready => !!(this._hMoCatalogMod && this._hBoostLocaleMod)
+    static _Ready => !!(this._hMoCatalogMod)
     static _loadLibraries()    {
         this._clearMoCatalogProcs()
-        this._hBoostLocaleMod:= this._hMoCatalogMod:= 0
-        if (!fileExist(this._moCatalogDllPath) || !fileExist(this._boostLocaleDllPath))
+        this._hMoCatalogMod := 0
+        if (!fileExist(this._moCatalogDllPath))
             return false
-        this._hBoostLocaleMod := dllCall("Kernel32.dll\LoadLibraryW", "WStr",this._boostLocaleDllPath, "Ptr")
-        if (this._hBoostLocaleMod)    {
-            this._hMoCatalogMod := dllCall("Kernel32.dll\LoadLibraryW", "WStr",this._moCatalogDllPath, "Ptr")
-            if (!this._hMoCatalogMod)
-                dllCall("Kernel32.dll\FreeLibrary", "Ptr",this._hBoostLocaleMod), this._hBoostLocaleMod := 0
-        }
-        ok := !!(this._hMoCatalogMod && this._hBoostLocaleMod)
+        this._hMoCatalogMod := dllCall("Kernel32.dll\LoadLibraryW", "WStr",this._moCatalogDllPath, "Ptr")
+        ok := !!(this._hMoCatalogMod)
         if (ok)    {
             ok := this._resolveMoCatalogProcs(this._hMoCatalogMod)
             if (!ok)
@@ -151,10 +131,10 @@ class _AhkL10n
             onExit(this._objbmOnExiting, 0)
         this._destroyAllHCatalogs()
         this._clearMoCatalogProcs()
-        if (this._hMoCatalogMod)
-            dllCall("Kernel32.dll\FreeLibrary", "Ptr",this._hMoCatalogMod), this._hMoCatalogMod := 0
-        if (this._hBoostLocaleMod)
-            dllCall("Kernel32.dll\FreeLibrary", "Ptr",this._hBoostLocaleMod), this._hBoostLocaleMod := 0
+        if (this._hMoCatalogMod)    {
+            hMod := this._hMoCatalogMod, this._hMoCatalogMod := 0
+            dllCall("Kernel32.dll\FreeLibrary", "Ptr",hMod), hMod := 0
+        }
     }
     static _resolveMoCatalogProcs(hMod)    {
         this._moCatalogProcTable := {}
@@ -265,6 +245,7 @@ class _AhkL10n
         return text
     }
     static nGetText(&single, &plural, num, domain := "default")    {
+        num := this._clampInt32(num)
         if (!this._Ready)
             return (num == 1 ? single : plural)
         hCatalog := this._ensureHCatalog(this._LocaleName, domain)
@@ -329,6 +310,7 @@ class _AhkL10n
         return text
     }
     static npGetText(&single, &plural, num, context, domain := "default")    {
+        num := this._clampInt32(num)
         if (!this._Ready)
             return (num == 1 ? single : plural)
         hCatalog := this._ensureHCatalog(this._LocaleName, domain)
@@ -365,6 +347,11 @@ class _AhkL10n
         }
         return (num == 1 ? single : plural)
     }
+    static loadTextDomain(domain := "default", locale?)    {
+        if (!this._Ready)
+            return false
+        return !!this._ensureHCatalog(isSet(locale)? locale . ".UTF-8" : this._LocaleName, domain)
+    }
     ;-------------------------------------------------------------------------------------------
     static _getFullPathName(fileName)    {
         neededChars := dllCall("Kernel32.dll\GetFullPathNameW", "WStr",fileName, "UInt",0, "Ptr",0, "Ptr",0, "UInt")
@@ -384,8 +371,9 @@ class _AhkL10n
         }
         return nobj
     }
+    static _clampInt32(n) => n > 2147483647 ? 2147483647 : n < -2147483648 ? -2147483648 : n
 }
-
+;=======================================================================================================================
 class _AhkLocaleSwitcher
 {
     ;  WARNING: Backward compatibility is not guaranteed for any methods or properties in this class.

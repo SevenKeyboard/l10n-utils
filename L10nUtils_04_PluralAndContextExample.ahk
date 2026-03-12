@@ -15,9 +15,22 @@ switchToLocale("es_ES")
 /*
 _n(single, plural, number[, domain]) selects the singular or plural translation
 based on the given number.
+
+For more conventional formatted output, consider using sprintf()
+to produce the same translated results with format specifiers handled:
+    #Include <sprintf> ;  https://github.com/SevenKeyboard/sprintf/blob/main-ahkv2.0/sprintf.ahk
+
+    n := 1
+    msgbox(sprintf(_n("%d file found.", "%d files found.", n), n))
+
+    n := 2
+    msgbox(sprintf(_n("%d file found.", "%d files found.", n), n))
 */
-msgbox(_n("%d file found.", "%d files found.", 1))      ;  "Se encontró %d archivo."
-msgbox(_n("%d file found.", "%d files found.", 2))      ;  "Se encontraron %d archivos."
+n := 1
+msgbox(strReplace(_n("%d file found.", "%d files found.", n), "%d", n))     ;  "Se encontró 1 archivo."
+
+n := 2
+msgbox(strReplace(_n("%d file found.", "%d files found.", n), "%d", n))     ;  "Se encontraron 2 archivos."
 
 /*
 _x(text, context[, domain]) selects a translation using both
