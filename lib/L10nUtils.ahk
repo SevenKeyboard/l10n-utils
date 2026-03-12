@@ -21,21 +21,11 @@
 ;   _nx()
 ;     https://developer.wordpress.org/reference/functions/_nx/
 ;
-;   Latest supported redistributable version
-;     https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-supported-redistributable-version
-;   Command-line options for the redistributable packages
-;     https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files?view=msvc-170#command-line-options-for-the-redistributable-packages
-;
 ;   MoCatalog.dll (64bits) - VirusTotal
-;     https://www.virustotal.com/gui/file/20849495a31ce0747993c524148b710ba8e7a06547bae382a649df9958471a74
+;     https://www.virustotal.com/gui/file/e7a5f2ad906d017cc4a39fe9d5b26ae5cbf7d35bcde2b7495b3607e819e5b77a
 ;   MoCatalog.dll - VirusTotal
-;     https://www.virustotal.com/gui/file/50ce84b453b255ed6bf8a922f8357cd83145a6636ba400bcbb6233f2bc91f243
-;   boost_locale-vc143-mt-x64-1_90.dll (64bits) - VirusTotal
-;     https://www.virustotal.com/gui/file/e249266f7a8c3540c3ddd99a12015f01cf7d42c2be8e9b9442fb70eec35550d3
-;   boost_locale-vc143-mt-x32-1_90.dll - VirusTotal
-;     https://www.virustotal.com/gui/file/805b4728ceb20c32fa2483a93cd0a850e623a6fd77cca0b1ad44ac2d9b6a1557
+;     https://www.virustotal.com/gui/file/f19c6db712433871edc003224d491bcc89b50e23e3e9bf1f2cfbc4f3f9195e2a
 ;==============================================================
-
 /*
 my-app/
 ├─ MyApp.ahk
@@ -43,11 +33,9 @@ my-app/
 │  └─ L10nUtils.ahk
 ├─ dll/
 │  ├─ x64/
-│  │  ├─ MoCatalog.dll
-│  │  └─ boost_locale-vc143-mt-x64-1_90.dll
+│     └─ MoCatalog.dll
 │  └─ x86/
-│     ├─ MoCatalog.dll
-│     └─ boost_locale-vc143-mt-x32-1_90.dll
+│     └─ MoCatalog.dll
 └─ locale/
    ├─ en_US/
    │  └─ LC_MESSAGES/
@@ -66,16 +54,15 @@ my-app/
    │     └─ ...
    └─ ...
 */
-
 class VersionManager_L10nUtils
 {
     static _ := VersionManager_L10nUtils._init()
     _init()    {
         global
-        L10NUTILS_VERSION := "0.0.0"
+        L10NUTILS_VERSION := "1.0.0"
     }
 }
-
+;=======================================================================================================================
 __(byRef text, domain := "default")    { ;  https://developer.wordpress.org/reference/functions/__/
     return _AhkL10n.getText(text, domain)
 }
@@ -88,7 +75,11 @@ _x(byRef text, context, domain := "default")    { ;  https://developer.wordpress
 _nx(byRef single, byRef plural, num, context, domain := "default")    { ;  https://developer.wordpress.org/reference/functions/_nx/
     return _AhkL10n.npGetText(single, plural, num, context, domain)
 }
-
+;-------------------------------------------------------------------------------------------
+loadTextDomain(domain := "default", locale := "")    { ;  https://developer.wordpress.org/reference/functions/load_textdomain/
+    return _AhkL10n.loadTextDomain(domain, locale)
+}
+;-------------------------------------------------------------------------------------------
 initOriginalLocale(locale)    {
     return _AhkLocaleSwitcher.initOriginalLocale(locale)
 }
@@ -107,17 +98,13 @@ restorePreviousLocale()    { ;  https://developer.wordpress.org/reference/functi
 restoreCurrentLocale()    { ;  https://developer.wordpress.org/reference/functions/restore_current_locale/
     return _AhkLocaleSwitcher.restoreCurrentLocale() ;  Restores the original locale and clears the switch stack.
 }
-
+;=======================================================================================================================
 class _AhkL10n
 {
     ;  WARNING: Backward compatibility is not guaranteed for any methods or properties in this class.
     static _dllDir              := _AhkL10n._getFullPathName(A_ScriptDir . "\dll" . (A_PtrSize == 8 ? "\x64" : "\x86"))
         ,_moCatalogDllPath      := _AhkL10n._dllDir . "\MoCatalog.dll" ;  https://github.com/SevenKeyboard/mo-catalog
-        ,_boostLocaleDllPath    := _AhkL10n._dllDir . (A_PtrSize == 8
-            ? "\boost_locale-vc143-mt-x64-1_90.dll"     ;  vcpkg\installed\x64-windows\bin\boost_locale-vc143-mt-x64-1_90.dll
-            : "\boost_locale-vc143-mt-x32-1_90.dll")    ;  vcpkg\installed\x86-windows\bin\boost_locale-vc143-mt-x32-1_90.dll
         ,_hMoCatalogMod         := 0
-        ,_hBoostLocaleMod       := 0
         ,_moCatalogProcTable    := {}
         ,_objbmOnExiting        := objBindMethod(_AhkL10n, "_onExiting")
         ,_                      := _AhkL10n._init()
@@ -129,24 +116,17 @@ class _AhkL10n
     }
     _Ready    {
         get  {
-            return !!(this._hMoCatalogMod && this._hBoostLocaleMod)
+            return !!(this._hMoCatalogMod)
         }
     }
     _loadLibraries()    {
         local
         this._clearMoCatalogProcs()
-        this._hBoostLocaleMod:= this._hMoCatalogMod:= 0
-        if (!fileExist(this._moCatalogDllPath) || !fileExist(this._boostLocaleDllPath))
+        this._hMoCatalogMod := 0
+        if (!fileExist(this._moCatalogDllPath))
             return false
-        this._hBoostLocaleMod := dllCall("Kernel32.dll\LoadLibraryW", "WStr",this._boostLocaleDllPath, "Ptr")
-        if (this._hBoostLocaleMod)    {
-            this._hMoCatalogMod := dllCall("Kernel32.dll\LoadLibraryW", "WStr",this._moCatalogDllPath, "Ptr")
-            if (!this._hMoCatalogMod)    {
-                hMod := this._hBoostLocaleMod, this._hBoostLocaleMod := 0
-                dllCall("Kernel32.dll\FreeLibrary", "Ptr",hMod), hMod := 0
-            }
-        }
-        ok := !!(this._hMoCatalogMod && this._hBoostLocaleMod)
+        this._hMoCatalogMod := dllCall("Kernel32.dll\LoadLibraryW", "WStr",this._moCatalogDllPath, "Ptr")
+        ok := !!(this._hMoCatalogMod)
         if (ok)    {
             ok := this._resolveMoCatalogProcs(this._hMoCatalogMod)
             if (!ok)
@@ -163,10 +143,6 @@ class _AhkL10n
         this._clearMoCatalogProcs()
         if (this._hMoCatalogMod)    {
             hMod := this._hMoCatalogMod, this._hMoCatalogMod := 0
-            dllCall("Kernel32.dll\FreeLibrary", "Ptr",hMod), hMod := 0
-        }
-        if (this._hBoostLocaleMod)    {
-            hMod := this._hBoostLocaleMod, this._hBoostLocaleMod := 0
             dllCall("Kernel32.dll\FreeLibrary", "Ptr",hMod), hMod := 0
         }
     }
@@ -263,135 +239,172 @@ class _AhkL10n
     ;-------------------------------------------------------------------------------------------
     getText(byRef text, domain := "default")    {
         local
-        if (!this._Ready)
-            return text
-        hCatalog := this._ensureHCatalog(this._LocaleName, domain)
-        if (!hCatalog)
-            return text
-        varSetCapacity(msgIdPtr, strPut(text, "UTF-8"), 0)
-        strPut(text, &msgIdPtr, "UTF-8")
-        requiredSize := dllCall(this._moCatalogProcTable.MoCatalogGetText
-            ,"Ptr",hCatalog
-            ,"Ptr",&msgIdPtr
-            ,"Ptr",0
-            ,"UPtr",0
-            ,"UPtr")
-        if (requiredSize)    {
-            varSetCapacity(translatedPtr, requiredSize, 0)
+        prevBatchLines := A_BatchLines
+        setBatchLines -1
+        try  {
+            if (!this._Ready)
+                return text
+            hCatalog := this._ensureHCatalog(this._LocaleName, domain)
+            if (!hCatalog)
+                return text
+            varSetCapacity(msgIdPtr, strPut(text, "UTF-8"), 0)
+            strPut(text, &msgIdPtr, "UTF-8")
             requiredSize := dllCall(this._moCatalogProcTable.MoCatalogGetText
                 ,"Ptr",hCatalog
                 ,"Ptr",&msgIdPtr
-                ,"Ptr",&translatedPtr
-                ,"UPtr",requiredSize
+                ,"Ptr",0
+                ,"UPtr",0
                 ,"UPtr")
-            if (requiredSize)
-                return strGet(&translatedPtr, requiredSize, "UTF-8")
+            if (requiredSize)    {
+                varSetCapacity(translatedPtr, requiredSize, 0)
+                requiredSize := dllCall(this._moCatalogProcTable.MoCatalogGetText
+                    ,"Ptr",hCatalog
+                    ,"Ptr",&msgIdPtr
+                    ,"Ptr",&translatedPtr
+                    ,"UPtr",requiredSize
+                    ,"UPtr")
+                if (requiredSize)
+                    return strGet(&translatedPtr, requiredSize, "UTF-8")
+            }
+            return text
+        }  finally  {
+            setBatchLines % prevBatchLines
         }
-        return text
     }
     nGetText(byRef single, byRef plural, num, domain := "default")    {
         local
-        if (!this._Ready)
-            return (num == 1 ? single : plural)
-        hCatalog := this._ensureHCatalog(this._LocaleName, domain)
-        if (!hCatalog)
-            return (num == 1 ? single : plural)
-        varSetCapacity(singlePtr, strPut(single, "UTF-8"), 0)
-        strPut(single, &singlePtr, "UTF-8")
-        varSetCapacity(pluralPtr, strPut(plural, "UTF-8"), 0)
-        strPut(plural, &pluralPtr, "UTF-8")
-        requiredSize := dllCall(this._moCatalogProcTable.MoCatalogNGetText
-            ,"Ptr",hCatalog
-            ,"Ptr",&singlePtr
-            ,"Ptr",&pluralPtr
-            ,"Int",num
-            ,"Ptr",0
-            ,"UPtr",0
-            ,"UPtr")
-        if (requiredSize)    {
-            varSetCapacity(translatedPtr, requiredSize, 0)
+        prevBatchLines := A_BatchLines
+        setBatchLines -1
+        try  {
+            num := this._clampInt32(num)
+            if (!this._Ready)
+                return (num == 1 ? single : plural)
+            hCatalog := this._ensureHCatalog(this._LocaleName, domain)
+            if (!hCatalog)
+                return (num == 1 ? single : plural)
+            varSetCapacity(singlePtr, strPut(single, "UTF-8"), 0)
+            strPut(single, &singlePtr, "UTF-8")
+            varSetCapacity(pluralPtr, strPut(plural, "UTF-8"), 0)
+            strPut(plural, &pluralPtr, "UTF-8")
             requiredSize := dllCall(this._moCatalogProcTable.MoCatalogNGetText
                 ,"Ptr",hCatalog
                 ,"Ptr",&singlePtr
                 ,"Ptr",&pluralPtr
                 ,"Int",num
-                ,"Ptr",&translatedPtr
-                ,"UPtr",requiredSize
+                ,"Ptr",0
+                ,"UPtr",0
                 ,"UPtr")
-            if (requiredSize)
-                return strGet(&translatedPtr, requiredSize, "UTF-8")
+            if (requiredSize)    {
+                varSetCapacity(translatedPtr, requiredSize, 0)
+                requiredSize := dllCall(this._moCatalogProcTable.MoCatalogNGetText
+                    ,"Ptr",hCatalog
+                    ,"Ptr",&singlePtr
+                    ,"Ptr",&pluralPtr
+                    ,"Int",num
+                    ,"Ptr",&translatedPtr
+                    ,"UPtr",requiredSize
+                    ,"UPtr")
+                if (requiredSize)
+                    return strGet(&translatedPtr, requiredSize, "UTF-8")
+            }
+            return (num == 1 ? single : plural)
+        }  finally  {
+            setBatchLines % prevBatchLines
         }
-        return (num == 1 ? single : plural)
     }
     pGetText(byRef text, context, domain := "default")    {
         local
-        if (!this._Ready)
-            return text
-        hCatalog := this._ensureHCatalog(this._LocaleName, domain)
-        if (!hCatalog)
-            return text
-        varSetCapacity(contextPtr, strPut(context, "UTF-8"), 0)
-        strPut(context, &contextPtr, "UTF-8")
-        varSetCapacity(msgIdPtr, strPut(text, "UTF-8"), 0)
-        strPut(text, &msgIdPtr, "UTF-8")
-        requiredSize := dllCall(this._moCatalogProcTable.MoCatalogPGetText
-            ,"Ptr",hCatalog
-            ,"Ptr",&contextPtr
-            ,"Ptr",&msgIdPtr
-            ,"Ptr",0
-            ,"UPtr",0
-            ,"UPtr")
-        if (requiredSize)    {
-            varSetCapacity(translatedPtr, requiredSize, 0)
+        prevBatchLines := A_BatchLines
+        setBatchLines -1
+        try  {
+            if (!this._Ready)
+                return text
+            hCatalog := this._ensureHCatalog(this._LocaleName, domain)
+            if (!hCatalog)
+                return text
+            varSetCapacity(contextPtr, strPut(context, "UTF-8"), 0)
+            strPut(context, &contextPtr, "UTF-8")
+            varSetCapacity(msgIdPtr, strPut(text, "UTF-8"), 0)
+            strPut(text, &msgIdPtr, "UTF-8")
             requiredSize := dllCall(this._moCatalogProcTable.MoCatalogPGetText
                 ,"Ptr",hCatalog
                 ,"Ptr",&contextPtr
                 ,"Ptr",&msgIdPtr
-                ,"Ptr",&translatedPtr
-                ,"UPtr",requiredSize
+                ,"Ptr",0
+                ,"UPtr",0
                 ,"UPtr")
-            if (requiredSize)
-                return strGet(&translatedPtr, requiredSize, "UTF-8")
+            if (requiredSize)    {
+                varSetCapacity(translatedPtr, requiredSize, 0)
+                requiredSize := dllCall(this._moCatalogProcTable.MoCatalogPGetText
+                    ,"Ptr",hCatalog
+                    ,"Ptr",&contextPtr
+                    ,"Ptr",&msgIdPtr
+                    ,"Ptr",&translatedPtr
+                    ,"UPtr",requiredSize
+                    ,"UPtr")
+                if (requiredSize)
+                    return strGet(&translatedPtr, requiredSize, "UTF-8")
+            }
+            return text
+        }  finally  {
+            setBatchLines % prevBatchLines
         }
-        return text
     }
     npGetText(byRef single, byRef plural, num, context, domain := "default")    {
         local
-        if (!this._Ready)
-            return (num == 1 ? single : plural)
-        hCatalog := this._ensureHCatalog(this._LocaleName, domain)
-        if (!hCatalog)
-            return (num == 1 ? single : plural)
-        varSetCapacity(contextPtr, strPut(context, "UTF-8"), 0)
-        strPut(context, &contextPtr, "UTF-8")
-        varSetCapacity(singlePtr, strPut(single, "UTF-8"), 0)
-        strPut(single, &singlePtr, "UTF-8")
-        varSetCapacity(pluralPtr, strPut(plural, "UTF-8"), 0)
-        strPut(plural, &pluralPtr, "UTF-8")
-        requiredSize := dllCall(this._moCatalogProcTable.MoCatalogNPGetText
-            ,"Ptr",hCatalog
-            ,"Ptr",&contextPtr
-            ,"Ptr",&singlePtr
-            ,"Ptr",&pluralPtr
-            ,"Int",num
-            ,"Ptr",0
-            ,"UPtr",0
-            ,"UPtr")
-        if (requiredSize)    {
-            varSetCapacity(translatedPtr, requiredSize, 0)
+        prevBatchLines := A_BatchLines
+        setBatchLines -1
+        try  {
+            num := this._clampInt32(num)
+            if (!this._Ready)
+                return (num == 1 ? single : plural)
+            hCatalog := this._ensureHCatalog(this._LocaleName, domain)
+            if (!hCatalog)
+                return (num == 1 ? single : plural)
+            varSetCapacity(contextPtr, strPut(context, "UTF-8"), 0)
+            strPut(context, &contextPtr, "UTF-8")
+            varSetCapacity(singlePtr, strPut(single, "UTF-8"), 0)
+            strPut(single, &singlePtr, "UTF-8")
+            varSetCapacity(pluralPtr, strPut(plural, "UTF-8"), 0)
+            strPut(plural, &pluralPtr, "UTF-8")
             requiredSize := dllCall(this._moCatalogProcTable.MoCatalogNPGetText
                 ,"Ptr",hCatalog
                 ,"Ptr",&contextPtr
                 ,"Ptr",&singlePtr
                 ,"Ptr",&pluralPtr
                 ,"Int",num
-                ,"Ptr",&translatedPtr
-                ,"UPtr",requiredSize
+                ,"Ptr",0
+                ,"UPtr",0
                 ,"UPtr")
-            if (requiredSize)
-                return strGet(&translatedPtr, requiredSize, "UTF-8")
+            if (requiredSize)    {
+                varSetCapacity(translatedPtr, requiredSize, 0)
+                requiredSize := dllCall(this._moCatalogProcTable.MoCatalogNPGetText
+                    ,"Ptr",hCatalog
+                    ,"Ptr",&contextPtr
+                    ,"Ptr",&singlePtr
+                    ,"Ptr",&pluralPtr
+                    ,"Int",num
+                    ,"Ptr",&translatedPtr
+                    ,"UPtr",requiredSize
+                    ,"UPtr")
+                if (requiredSize)
+                    return strGet(&translatedPtr, requiredSize, "UTF-8")
+            }
+            return (num == 1 ? single : plural)
+        }  finally  {
+            setBatchLines % prevBatchLines
         }
-        return (num == 1 ? single : plural)
+    }
+    loadTextDomain(domain := "default", locale := "")    {
+        prevBatchLines := A_BatchLines
+        setBatchLines -1
+        try  {
+            if (!this._Ready)
+                return false
+            return !!this._ensureHCatalog(locale !== "" ? locale . ".UTF-8" : this._LocaleName, domain)
+        }  finally  {
+            setBatchLines % prevBatchLines
+        }
     }
     ;-------------------------------------------------------------------------------------------
     _getFullPathName(fileName)    {
@@ -414,8 +427,11 @@ class _AhkL10n
         }
         return nobj
     }
+    _clampInt32(n)    {
+        return n > 2147483647 ? 2147483647 : n < -2147483648 ? -2147483648 : n
+    }
 }
-
+;=======================================================================================================================
 class _AhkLocaleSwitcher
 {
     ;  WARNING: Backward compatibility is not guaranteed for any methods or properties in this class.
