@@ -16,15 +16,15 @@ switchToLocale("es_ES")
 _n(single, plural, number[, domain]) selects the singular or plural translation
 based on the given number.
 
-For more conventional formatted output, consider using sprintf()
+For more conventional formatted output, consider using phpSprintf()
 to produce the same translated results with format specifiers handled:
-    #Include <sprintf> ;  https://github.com/SevenKeyboard/sprintf/blob/main-ahkv1.1/sprintf.ahk
+    #Include <phpSprintf> ;  https://github.com/SevenKeyboard/sprintf/blob/main-ahkv1.1/phpSprintf.ahk
 
     n := 1
-    msgbox % sprintf(_n("%d file found.", "%d files found.", n), n)
+    msgbox % phpSprintf(_n("%d file found.", "%d files found.", n), n)
 
     n := 2
-    msgbox % sprintf(_n("%d file found.", "%d files found.", n), n)
+    msgbox % phpSprintf(_n("%d file found.", "%d files found.", n), n)
 */
 n := 1
 msgbox % strReplace(_n("%d file found.", "%d files found.", n), "%d", n)    ;  "Se encontró 1 archivo."
