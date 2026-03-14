@@ -7,6 +7,11 @@
 ; License: MIT License
 ;
 ; Documentation / References:
+;   AhkV2_I18n.ahk
+;     https://github.com/SevenKeyboard/i18n/blob/main/AhkV2_I18n.ahk
+;   AhkV2_publishCompiledTranslationsToRuntimeLocale.ahk
+;     https://github.com/SevenKeyboard/publish-compiled-translations-to-runtime-locale/blob/main/AhkV2_publishCompiledTranslationsToRuntimeLocale.ahk
+;
 ;   MoCatalog
 ;     https://github.com/SevenKeyboard/mo-catalog
 ;   Boost.Locale
