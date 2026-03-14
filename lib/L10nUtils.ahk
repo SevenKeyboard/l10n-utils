@@ -33,28 +33,28 @@
 ;==============================================================
 
 /*
-my-app/
+my-app\
 ├─ MyApp.ahk
-├─ lib/
+├─ lib\
 │  └─ L10nUtils.ahk
-├─ dll/
-│  ├─ x64/
+├─ dll\
+│  ├─ x64\
 │     └─ MoCatalog.dll
-│  └─ x86/
+│  └─ x86\
 │     └─ MoCatalog.dll
-└─ locale/
-   ├─ en_US/
-   │  └─ LC_MESSAGES/
+└─ locale\
+   ├─ en_US\
+   │  └─ LC_MESSAGES\
    │     ├─ default.mo
    │     ├─ extra.mo
    │     └─ ...
-   ├─ es_ES/
-   │  └─ LC_MESSAGES/
+   ├─ es_ES\
+   │  └─ LC_MESSAGES\
    │     ├─ default.mo
    │     ├─ extra.mo
    │     └─ ...
-   ├─ ja/
-   │  └─ LC_MESSAGES/
+   ├─ ja\
+   │  └─ LC_MESSAGES\
    │     ├─ default.mo
    │     ├─ extra.mo
    │     └─ ...
