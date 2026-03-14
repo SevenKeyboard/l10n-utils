@@ -31,6 +31,7 @@
 ;   MoCatalog.dll - VirusTotal
 ;     https://www.virustotal.com/gui/file/f19c6db712433871edc003224d491bcc89b50e23e3e9bf1f2cfbc4f3f9195e2a
 ;==============================================================
+
 /*
 my-app/
 ├─ MyApp.ahk
@@ -59,6 +60,7 @@ my-app/
    │     └─ ...
    └─ ...
 */
+
 class VersionManager_L10nUtils
 {
     static _ := this._init()
