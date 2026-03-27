@@ -1,4 +1,5 @@
-﻿#Requires AutoHotkey v1.1.35+
+﻿;@I18n-IgnoreFile
+#Requires AutoHotkey v1.1.35+
 ;==============================================================
 ; L10nUtils — Localization helpers with WordPress-style locale switching and MO catalog loading
 ;
