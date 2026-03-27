@@ -71,6 +71,7 @@ class VersionManager_L10nUtils
     }
 }
 ;=======================================================================================================================
+;@I18n-IgnoreBegin
 __(byRef text, domain := "default")    { ;  https://developer.wordpress.org/reference/functions/__/
     return _AhkL10n.getText(text, domain)
 }
@@ -83,6 +84,7 @@ _x(byRef text, context, domain := "default")    { ;  https://developer.wordpress
 _nx(byRef single, byRef plural, num, context, domain := "default")    { ;  https://developer.wordpress.org/reference/functions/_nx/
     return _AhkL10n.npGetText(single, plural, num, context, domain)
 }
+;@I18n-IgnoreEnd
 ;-------------------------------------------------------------------------------------------
 loadTextDomain(domain := "default", locale := "")    { ;  https://developer.wordpress.org/reference/functions/load_textdomain/
     return _AhkL10n.loadTextDomain(domain, locale)
