@@ -71,6 +71,7 @@ class VersionManager_L10nUtils
     }
 }
 ;=======================================================================================================================
+;@I18n-IgnoreBegin
 __(text, domain := "default")    { ;  https://developer.wordpress.org/reference/functions/__/
     return _AhkL10n.getText(text is VarRef ? text : &text
         ,domain)
@@ -93,6 +94,7 @@ _nx(single, plural, num, context, domain := "default")    { ;  https://developer
         ,context
         ,domain)
 }
+;@I18n-IgnoreEnd
 ;-------------------------------------------------------------------------------------------
 loadTextDomain(domain := "default", locale?) => _AhkL10n.loadTextDomain(domain, locale?) ;  https://developer.wordpress.org/reference/functions/load_textdomain/
 ;-------------------------------------------------------------------------------------------
